@@ -23,6 +23,7 @@ class VideoGeneratorApp:
         self.slide_duration = tk.IntVar(value=10)
         self.transition_effect = tk.StringVar(value="Cross-fade")
         self.photo_list = []
+        self.ffmpeg_cmd = None # Will store the path to ffmpeg
         
         self.ratios = {
             "16:9 (YouTube)": (16, 9),
@@ -110,17 +111,32 @@ class VideoGeneratorApp:
         self.btn_generate.pack(side=tk.BOTTOM, pady=20, fill=tk.X)
 
     def check_ffmpeg_startup(self):
-        """Checks for FFmpeg on startup"""
-        if not os.path.exists("ffmpeg.exe"):
-            self.lbl_ffmpeg_status.config(text="✘ FFmpeg NOT FOUND!", foreground="red")
-            self.btn_download_ffmpeg.pack(side=tk.RIGHT, padx=5)
-            messagebox.showwarning("Dependency Warning", 
-                "'ffmpeg.exe' was not found in the folder.\n\n"
-                "You can still generate the video, but it will have NO AUDIO.\n"
-                "Click 'Download FFmpeg' to fix this.")
-        else:
-            self.lbl_ffmpeg_status.config(text="✔ FFmpeg detected!", foreground="green")
+        """Checks for FFmpeg on startup (local or global)"""
+        # 1. Check local
+        if os.path.exists("ffmpeg.exe"):
+            self.ffmpeg_cmd = "ffmpeg.exe"
+            self.lbl_ffmpeg_status.config(text="✔ Local FFmpeg detected!", foreground="green")
             self.btn_download_ffmpeg.pack_forget()
+            return
+
+        # 2. Check global (PATH)
+        try:
+            subprocess.run(["ffmpeg", "-version"], capture_output=True, check=True, creationflags=0x08000000)
+            self.ffmpeg_cmd = "ffmpeg"
+            self.lbl_ffmpeg_status.config(text="✔ Global FFmpeg detected!", foreground="green")
+            self.btn_download_ffmpeg.pack_forget()
+            return
+        except:
+            pass
+
+        # 3. Not found
+        self.ffmpeg_cmd = None
+        self.lbl_ffmpeg_status.config(text="✘ FFmpeg NOT FOUND!", foreground="red")
+        self.btn_download_ffmpeg.pack(side=tk.RIGHT, padx=5)
+        messagebox.showwarning("Dependency Warning", 
+            "FFmpeg was not found locally ('ffmpeg.exe') or in your system PATH.\n\n"
+            "You can still generate the video, but it will have NO AUDIO.\n"
+            "Click 'Download FFmpeg' to fix this.")
 
     def open_ffmpeg_download(self):
         webbrowser.open("https://www.gyan.dev/ffmpeg/builds/ffmpeg-git-essentials.7z")
@@ -232,9 +248,9 @@ class VideoGeneratorApp:
             video.release()
 
             audio = self.audio_path.get()
-            if audio and os.path.exists("ffmpeg.exe"):
+            if audio and self.ffmpeg_cmd:
                 self.lbl_status.config(text="Mixing audio...")
-                cmd = ["ffmpeg.exe", "-y", "-i", temp_name, "-stream_loop", "-1", "-i", audio, 
+                cmd = [self.ffmpeg_cmd, "-y", "-i", temp_name, "-stream_loop", "-1", "-i", audio, 
                        "-map", "0:v:0", "-map", "1:a:0", "-c:v", "copy", "-c:a", "aac", "-shortest", final_name]
                 subprocess.run(cmd, check=True, creationflags=0x08000000)
                 if os.path.exists(temp_name): os.remove(temp_name)
