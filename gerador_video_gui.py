@@ -13,7 +13,7 @@ from datetime import datetime
 class VideoGeneratorApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Criador de Slideshow Pro - V3")
+        self.root.title("Criador de Slideshow Pro - V3.1")
         self.root.geometry("600x650")
         
         self.caminho_main = tk.StringVar()
@@ -21,7 +21,6 @@ class VideoGeneratorApp:
         self.proporcao_selecionada = tk.StringVar(value="16:9 (YouTube)")
         self.lista_fotos = []
         
-        # Mapeamento de resoluções
         self.formatos = {
             "16:9 (YouTube)": (1920, 1080),
             "9:16 (TikTok/Reels)": (1080, 1920),
@@ -30,23 +29,25 @@ class VideoGeneratorApp:
         }
         
         self.setup_ui()
-        self.verificar_ffmpeg()
+        
+        # VERIFICAÇÃO NO STARTUP
+        self.root.after(500, self.alerta_startup_ffmpeg)
 
     def setup_ui(self):
         main_frame = ttk.Frame(self.root, padding="20")
         main_frame.pack(fill=tk.BOTH, expand=True)
 
-        # --- Alerta FFmpeg ---
+        # --- Frame de Alerta FFmpeg (Fica no topo) ---
         self.frame_alerta = ttk.Frame(main_frame)
         self.lbl_ffmpeg_status = ttk.Label(self.frame_alerta, text="", font=('Segoe UI', 9, 'bold'))
         self.lbl_ffmpeg_status.pack(side=tk.LEFT)
         self.btn_baixar_ffmpeg = ttk.Button(self.frame_alerta, text="Baixar FFmpeg", command=self.abrir_download_ffmpeg)
-        self.frame_alerta.pack(fill=tk.X)
+        self.frame_alerta.pack(fill=tk.X, pady=(0, 10))
 
-        # --- ESCOLHA DE PROPORÇÃO ---
-        ttk.Label(main_frame, text="Proporção do Vídeo:", font=('Segoe UI', 10, 'bold')).pack(anchor=tk.W, pady=(15,0))
-        combo_proporcao = ttk.Combobox(main_frame, textvariable=self.proporcao_selecionada, values=list(self.formatos.keys()), state="readonly")
-        combo_proporcao.pack(fill=tk.X, pady=5)
+        # --- Seleção de Proporção ---
+        ttk.Label(main_frame, text="Proporção do Vídeo:", font=('Segoe UI', 10, 'bold')).pack(anchor=tk.W)
+        self.combo_proporcao = ttk.Combobox(main_frame, textvariable=self.proporcao_selecionada, values=list(self.formatos.keys()), state="readonly")
+        self.combo_proporcao.pack(fill=tk.X, pady=5)
 
         # --- Seleção de Arquivos ---
         ttk.Label(main_frame, text="Imagem de Destaque (Repete a cada 20):", font=('Segoe UI', 10, 'bold')).pack(anchor=tk.W, pady=(10,0))
@@ -71,13 +72,18 @@ class VideoGeneratorApp:
         self.btn_gerar = ttk.Button(main_frame, text="GERAR VÍDEO", command=self.iniciar_thread)
         self.btn_gerar.pack(side=tk.BOTTOM, pady=20, fill=tk.X)
 
-    def verificar_ffmpeg(self):
-        if os.path.exists("ffmpeg.exe"):
-            self.lbl_ffmpeg_status.config(text="✔ FFmpeg detectado!", foreground="green")
-            self.btn_baixar_ffmpeg.pack_forget()
-        else:
+    def alerta_startup_ffmpeg(self):
+        """Verifica o FFmpeg assim que o programa abre"""
+        if not os.path.exists("ffmpeg.exe"):
             self.lbl_ffmpeg_status.config(text="✘ FFmpeg NÃO ENCONTRADO!", foreground="red")
             self.btn_baixar_ffmpeg.pack(side=tk.RIGHT, padx=5)
+            messagebox.showwarning("Aviso de Dependência", 
+                "O arquivo 'ffmpeg.exe' não foi encontrado na pasta.\n\n"
+                "Você poderá gerar o vídeo, mas ele ficará SEM ÁUDIO.\n"
+                "Clique no botão 'Baixar FFmpeg' para resolver.")
+        else:
+            self.lbl_ffmpeg_status.config(text="✔ FFmpeg detectado!", foreground="green")
+            self.btn_baixar_ffmpeg.pack_forget()
 
     def abrir_download_ffmpeg(self):
         webbrowser.open("https://www.gyan.dev/ffmpeg/builds/ffmpeg-git-essentials.7z")
@@ -100,39 +106,30 @@ class VideoGeneratorApp:
         img = cv2.imdecode(np.fromfile(caminho, dtype=np.uint8), cv2.IMREAD_COLOR)
         if img is None: return None
         h, w = img.shape[:2]
-        
-        # 1. Fundo (Blur) - Preenchimento total
-        escala_fundo = max(largura/w, altura/h)
-        fundo = cv2.resize(img, (math.ceil(w * escala_fundo), math.ceil(h * escala_fundo)))
-        # Centraliza o crop do fundo
-        y_c = (fundo.shape[0] - altura) // 2
-        x_c = (fundo.shape[1] - largura) // 2
-        fundo = fundo[y_c:y_c+altura, x_c:x_c+largura]
-        fundo = cv2.GaussianBlur(fundo, (101, 101), 0)
-        
-        # 2. Imagem Central - Proporção original sem cortar
-        escala_frente = min(largura/w, altura/h)
-        img_frente = cv2.resize(img, (int(w * escala_frente), int(h * escala_frente)))
-        h_f, w_f = img_frente.shape[:2]
-        
-        # Sobreposição centralizada
-        y_off = (altura - h_f) // 2
-        x_off = (largura - w_f) // 2
-        fundo[y_off:y_off+h_f, x_off:x_off+w_f] = img_frente
+        esc_f = max(largura/w, altura/h)
+        fundo = cv2.resize(img, (math.ceil(w * esc_f), math.ceil(h * esc_f)))
+        y_c, x_c = (fundo.shape[0]-altura)//2, (fundo.shape[1]-largura)//2
+        fundo = cv2.GaussianBlur(fundo[y_c:y_c+altura, x_c:x_c+largura], (101, 101), 0)
+        esc_v = min(largura/w, altura/h)
+        frente = cv2.resize(img, (int(w*esc_v), int(h*esc_v)))
+        yf, xf = (altura-frente.shape[0])//2, (largura-frente.shape[1])//2
+        fundo[yf:yf+frente.shape[0], xf:xf+frente.shape[1]] = frente
         return fundo
 
     def iniciar_thread(self):
-        if not self.lista_fotos:
-            return messagebox.showwarning("Erro", "Selecione as fotos!")
+        if not self.lista_fotos: return messagebox.showwarning("Erro", "Selecione as fotos!")
         self.btn_gerar.config(state=tk.DISABLED)
         threading.Thread(target=self.processar_video, daemon=True).start()
 
     def processar_video(self):
         try:
+            # Criar pasta de saída se não existir
+            if not os.path.exists("output"): os.makedirs("output")
+            
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             largura, altura = self.formatos[self.proporcao_selecionada.get()]
-            nome_video_temp = f"temp_{timestamp}.mp4"
-            nome_video_final = f"slideshow_{timestamp}.mp4"
+            nome_temp = f"output/temp_{timestamp}.mp4"
+            nome_final = f"output/slideshow_{timestamp}.mp4"
 
             sequencia = []
             fotos = self.lista_fotos.copy()
@@ -143,41 +140,42 @@ class VideoGeneratorApp:
                 sequencia.append(f)
 
             self.progresso["maximum"] = len(sequencia)
-            # Nota: 'mp4v' é padrão OpenCV para Windows
-            video = cv2.VideoWriter(nome_video_temp, cv2.VideoWriter_fourcc(*'mp4v'), 30, (largura, altura))
+            video = cv2.VideoWriter(nome_temp, cv2.VideoWriter_fourcc(*'mp4v'), 30, (largura, altura))
             
-            img_anterior = None
-            for i, caminho in enumerate(sequencia):
-                self.lbl_status.config(text=f"Processando slide {i+1} de {len(sequencia)}...")
+            img_ant = None
+            for i, cam in enumerate(sequencia):
+                self.lbl_status.config(text=f"Processando {i+1}/{len(sequencia)}...")
                 self.progresso["value"] = i + 1
-                img_atual = self.preparar_imagem(caminho, largura, altura)
-                if img_atual is None: continue
-                
-                if img_anterior is not None:
-                    for j in range(30): # 1 segundo de transição
-                        alpha = j / 30
-                        video.write(cv2.addWeighted(img_anterior, 1-alpha, img_atual, alpha, 0))
-                
-                for _ in range(90): video.write(img_atual) # 3 segundos estático
-                img_anterior = img_atual
-                
+                img_at = self.preparar_imagem(cam, largura, altura)
+                if img_at is None: continue
+                if img_ant is not None:
+                    for j in range(30):
+                        a = j/30
+                        video.write(cv2.addWeighted(img_ant, 1-a, img_at, a, 0))
+                for _ in range(90): video.write(img_at)
+                img_ant = img_at
             video.release()
 
             audio = self.caminho_audio.get()
             if audio and os.path.exists("ffmpeg.exe"):
-                self.lbl_status.config(text="Aplicando áudio...")
-                cmd = ["ffmpeg.exe", "-y", "-i", nome_video_temp, "-stream_loop", "-1", "-i", audio, 
-                       "-map", "0:v:0", "-map", "1:a:0", "-c:v", "copy", "-c:a", "aac", "-shortest", nome_video_final]
+                self.lbl_status.config(text="Mixando áudio...")
+                cmd = ["ffmpeg.exe", "-y", "-i", nome_temp, "-stream_loop", "-1", "-i", audio, 
+                       "-map", "0:v:0", "-map", "1:a:0", "-c:v", "copy", "-c:a", "aac", "-shortest", nome_final]
                 subprocess.run(cmd, check=True, creationflags=0x08000000)
-                if os.path.exists(nome_video_temp): os.remove(nome_video_temp)
-                res = nome_video_final
+                if os.path.exists(nome_temp): os.remove(nome_temp)
+                res = nome_final
             else:
-                res = nome_video_temp
+                res = nome_temp
 
-            messagebox.showinfo("Sucesso", f"Vídeo pronto!\nSalvo como: {res}")
+            messagebox.showinfo("Sucesso", f"Vídeo salvo na pasta output:\n{os.path.basename(res)}")
         except Exception as e:
             messagebox.showerror("Erro", str(e))
         finally:
-            self.lbl_status.config(text="Concluído.")
+            self.lbl_status.config(text="Pronto!")
             self.btn_gerar.config(state=tk.NORMAL)
             self.progresso["value"] = 0
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = VideoGeneratorApp(root)
+    root.mainloop()
