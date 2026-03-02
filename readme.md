@@ -38,7 +38,7 @@ Para criar um binário que rode em qualquer computador sem precisar instalar o P
    ```
 2. No terminal, dentro da pasta do projeto, execute:
    ```bash
-   pyinstaller --noconsole --onefile gerador_video_gui.py
+   python -m PyInstaller --noconsole --onefile gerador_video_gui.py
    ```
 3. O arquivo `.exe` será gerado dentro da pasta `dist/`. 
    * **Importante:** O arquivo `ffmpeg.exe` deve estar na mesma pasta do executável para que a música funcione.
@@ -52,4 +52,5 @@ Para criar um binário que rode em qualquer computador sem precisar instalar o P
 * **Numpy**: Processamento de matrizes de imagem.
 
 ---
+
 Desenvolvido para automatizar a criação de conteúdo visual de forma rápida e prática.
