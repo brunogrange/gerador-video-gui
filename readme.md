@@ -18,8 +18,14 @@ Professional video generator with a graphical interface and intelligent dependen
 * The program automatically creates an `/output` folder to save your videos.
 * File names follow the pattern: `slideshow_YYYYMMDD_HHMMSS.mp4`.
 
-## 🛠️ Generate Executable
-```bash
-python -m PyInstaller --noconsole --onefile gerador_video_gui.py
-```
-*(Remember to copy `ffmpeg.exe` to your new `.exe` folder)*
+## 🛠️ Generate Executable (Windows)
+
+You can generate the executable in two ways:
+
+1.  **Using the script:** Just double-click `build.bat` in the project root.
+2.  **Manually:**
+    ```bash
+    python -m PyInstaller --noconsole --onefile gerador_video_gui.py
+    ```
+*(Remember to copy `ffmpeg.exe` to your new `dist` folder)*
+
