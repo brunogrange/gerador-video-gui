@@ -1,18 +1,18 @@
 # 🎥 Slideshow Pro Maker (V3.1)
 
-Gerador de vídeos profissional com interface gráfica e verificação inteligente de dependências.
+Professional video generator with a graphical interface and intelligent dependency verification.
 
-## 🚀 Instalação Rápida
+## 🚀 Quick Installation
 
-1. **Dependências:** `pip install opencv-python numpy`
-2. **FFmpeg:** Baixe o `ffmpeg.exe` e coloque na mesma pasta deste script. Se você esquecer, o programa irá te avisar assim que abrir!
+1. **Dependencies:** `pip install opencv-python numpy`
+2. **FFmpeg:** Download `ffmpeg.exe` and place it in the same folder as this script. If you forget, the program will warn you as soon as it opens!
 
-## 📂 Organização
-* O programa cria automaticamente uma pasta `/output` para salvar seus vídeos.
-* Os nomes dos arquivos seguem o padrão: `slideshow_AAAAMMDD_HHMMSS.mp4`.
+## 📂 Organization
+* The program automatically creates an `/output` folder to save your videos.
+* File names follow the pattern: `slideshow_YYYYMMDD_HHMMSS.mp4`.
 
-## 🛠️ Gerar Executável
+## 🛠️ Generate Executable
 ```bash
-python -m PyInstaller --noconsole --onefile gerador_video_gui_v3_1.py
+python -m PyInstaller --noconsole --onefile gerador_video_gui.py
 ```
-*(Lembre-se de copiar o ffmpeg.exe para a pasta do seu novo .exe)*
+*(Remember to copy ffmpeg.exe to your new .exe folder)*
