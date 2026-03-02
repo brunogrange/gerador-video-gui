@@ -51,3 +51,4 @@ python -m PyInstaller --noconsole --onefile gerador_video_gui.py
 - FFmpeg existence check occurs at application startup (`check_ffmpeg_startup`).
 - Transition effects include "None", "Cross-fade", and "Slide (Left/Right)".
 - Slide duration is configurable, with a 1-second (30 frames) transition period.
+- Resolution can be selected (480p, 720p, 1080p, 4K), and is dynamically calculated based on the aspect ratio.
