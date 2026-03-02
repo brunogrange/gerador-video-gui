@@ -14,20 +14,28 @@ class VideoGeneratorApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Slideshow Pro Maker - V3.1")
-        self.root.geometry("600x750")
+        self.root.geometry("600x800")
         
         self.main_path = tk.StringVar()
         self.audio_path = tk.StringVar()
         self.selected_ratio = tk.StringVar(value="16:9 (YouTube)")
+        self.selected_quality = tk.StringVar(value="Full HD (1080p)")
         self.slide_duration = tk.IntVar(value=10)
         self.transition_effect = tk.StringVar(value="Cross-fade")
         self.photo_list = []
         
-        self.formats = {
-            "16:9 (YouTube)": (1920, 1080),
-            "9:16 (TikTok/Reels)": (1080, 1920),
-            "1:1 (Instagram Post)": (1080, 1080),
-            "4:3 (Old/TV)": (1440, 1080)
+        self.ratios = {
+            "16:9 (YouTube)": (16, 9),
+            "9:16 (TikTok/Reels)": (9, 16),
+            "1:1 (Instagram Post)": (1, 1),
+            "4:3 (Old/TV)": (4, 3)
+        }
+
+        self.qualities = {
+            "Low-res (480p)": 480,
+            "HD (720p)": 720,
+            "Full HD (1080p)": 1080,
+            "4K (2160p)": 2160
         }
 
         self.effects = ["None", "Cross-fade", "Slide (Left/Right)"]
@@ -48,10 +56,21 @@ class VideoGeneratorApp:
         self.btn_download_ffmpeg = ttk.Button(self.alert_frame, text="Download FFmpeg", command=self.open_ffmpeg_download)
         self.alert_frame.pack(fill=tk.X, pady=(0, 10))
 
-        # --- Ratio Selection ---
-        ttk.Label(main_frame, text="Video Aspect Ratio:", font=('Segoe UI', 10, 'bold')).pack(anchor=tk.W)
-        self.combo_ratio = ttk.Combobox(main_frame, textvariable=self.selected_ratio, values=list(self.formats.keys()), state="readonly")
-        self.combo_ratio.pack(fill=tk.X, pady=5)
+        # --- Ratio & Quality Selection ---
+        f_res = ttk.Frame(main_frame)
+        f_res.pack(fill=tk.X, pady=5)
+
+        f_ratio = ttk.Frame(f_res)
+        f_ratio.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        ttk.Label(f_ratio, text="Aspect Ratio:", font=('Segoe UI', 10, 'bold')).pack(anchor=tk.W)
+        self.combo_ratio = ttk.Combobox(f_ratio, textvariable=self.selected_ratio, values=list(self.ratios.keys()), state="readonly")
+        self.combo_ratio.pack(fill=tk.X, padx=(0, 5))
+
+        f_quality = ttk.Frame(f_res)
+        f_quality.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        ttk.Label(f_quality, text="Resolution:", font=('Segoe UI', 10, 'bold')).pack(anchor=tk.W)
+        self.combo_quality = ttk.Combobox(f_quality, textvariable=self.selected_quality, values=list(self.qualities.keys()), state="readonly")
+        self.combo_quality.pack(fill=tk.X)
 
         # --- Slide Settings ---
         f_config = ttk.Frame(main_frame)
@@ -145,7 +164,22 @@ class VideoGeneratorApp:
             if not os.path.exists("output"): os.makedirs("output")
             
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            width, height = self.formats[self.selected_ratio.get()]
+            
+            # Calculate resolution
+            base_h = self.qualities[self.selected_quality.get()]
+            r_w, r_h = self.ratios[self.selected_ratio.get()]
+            
+            if r_w >= r_h: # Horizontal or Square
+                height = base_h
+                width = int(base_h * (r_w / r_h))
+            else: # Vertical
+                width = base_h
+                height = int(base_h * (r_h / r_w))
+            
+            # Ensure dimensions are even (required by many codecs)
+            width = (width // 2) * 2
+            height = (height // 2) * 2
+
             temp_name = f"output/temp_{timestamp}.mp4"
             final_name = f"output/slideshow_{timestamp}.mp4"
 
